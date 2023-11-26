@@ -1,5 +1,6 @@
 import java.sql.*;
 import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Scanner;
 
@@ -102,12 +103,15 @@ public class HomePage {
         String query = "select * from doctors where specialization=?";
         try{
             PreparedStatement preparedStatement = connection.prepareStatement(query);
-            preparedStatement.setString(1,departmentName);
-            ResultSet resultSet  = preparedStatement.executeQuery();
-            if(resultSet.next()){
+            preparedStatement.setString(1, departmentName);
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            while (resultSet.next()) {
                 String name = resultSet.getString("name");
-                System.out.println(name);
+                int id = resultSet.getInt("id");
+                System.out.println(id + " " + name);
             }
+
             System.out.println("Start Booking appointment");
             bookAppointment(connection,sc,patient,doctor,departmentName);
 
@@ -127,6 +131,7 @@ public class HomePage {
             PreparedStatement preparedStatement = connection.prepareStatement(query);
             preparedStatement.setInt(1,pid);
             ResultSet resultSet = preparedStatement.executeQuery();
+
             if(resultSet.next()){
                 String name = resultSet.getString("Name");
                 System.out.println("Logged in successfully");
@@ -171,40 +176,48 @@ public class HomePage {
     public static void bookAppointment(Connection connection, Scanner sc, SignUp patient, Doctor doctor,String department){
         System.out.println("Enter patient id");
         int patient_id = sc.nextInt();
+
         System.out.println("Enter doctor name");
         String doctor_name = sc.next();
+
+        System.out.println("Enter doctor id");
+        int doctor_id = sc.nextInt();
+
         System.out.println("Enter appointment date (YYYY-MM-DD):");
         String appointment_date = sc.next();
 
         // check if patient and doctor exists
-        if(patient.getPatientById(patient_id) && doctor.getDoctorByName(doctor_name.trim())){
+        if(patient.getPatientById(patient_id)){
             // check if doctor is available or not
-            if(checkDoctorAvailability(doctor_name,appointment_date,connection)){
-                String appointment_query = "INSERT INTO appointments(patient_id, doctor_name, appointment_date, department) VALUES (?,?,?)";
-                try{
-                    PreparedStatement preparedStatement = connection.prepareStatement(appointment_query);
-                    preparedStatement.setInt(1, patient_id);
-                    preparedStatement.setString(2, doctor_name);
-                    preparedStatement.setString(3, appointment_date);
-                    preparedStatement.setString(4, department);
-                    int rowsAffected = preparedStatement.executeUpdate();
-                    if(rowsAffected>0){
-                        System.out.println("Appointment Booked");
+            if(doctor.getDoctorByName(doctor_name,department)) {
+                if (checkDoctorAvailability(doctor_name, appointment_date, connection)) {
+                    String appointment_query = "INSERT INTO appointments(patient_id,doctor_id,appointment_date, department,doctor_name) VALUES (?,?,?,?,?)";
+                    try {
+                        PreparedStatement preparedStatement = connection.prepareStatement(appointment_query);
+                        preparedStatement.setInt(1, patient_id);
+                        preparedStatement.setInt(2, doctor_id);
+                        preparedStatement.setString(3, appointment_date);
+                        preparedStatement.setString(4, department);
+                        preparedStatement.setString(5, doctor_name);
+                        int rowsAffected = preparedStatement.executeUpdate();
+
+                        if (rowsAffected > 0) {
+                            System.out.println("Appointment Booked");
+                        } else {
+                            System.out.println("Failed to book appointment");
+                        }
+                    } catch (SQLException e) {
+                        e.printStackTrace();
                     }
-                    else{
-                        System.out.println("Failed to book appointment");
-                    }
+                } else {
+                    System.out.println("Doctor is not available on this date");
                 }
-                catch(SQLException e){
-                    e.printStackTrace();
-                }
-            }
-            else{
-                System.out.println("Doctor is not available on this date");
+            }else{
+                System.out.println("dpctor not");
             }
         }
         else{
-            System.out.println("Either doctor or patient does not exist");
+            System.out.println("patient does not exist");
         }
 
     }
@@ -218,7 +231,7 @@ public class HomePage {
             ResultSet resultSet = preparedStatement.executeQuery();
             if(resultSet.next()){
                 int count = resultSet.getInt(1);
-                if(count<=1){
+                if(count<2){
                     return true;
                 }
                 else{

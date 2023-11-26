@@ -32,12 +32,12 @@ public class Doctor {
         }
     }
 
-    public boolean getDoctorByName(String name){
-        String modifiedName = "Dr. " + name;
-        String query = "select * from doctors where name = ? COLLATE ";
+    public boolean getDoctorByName(String name,String department){
+        String query = "select * from doctors where name = ? AND specialization= ?";
         try{
             PreparedStatement preparedStatement = connection.prepareStatement(query);
-            preparedStatement.setString(1,modifiedName);
+            preparedStatement.setString(1,name);
+            preparedStatement.setString(2,department);
             ResultSet resultSet = preparedStatement.executeQuery();
             if(resultSet.next()){
                 return true;
