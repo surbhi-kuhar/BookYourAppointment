@@ -24,9 +24,9 @@ public class HomePage {
             Connection connection = DriverManager.getConnection(url,username,password);
             SignUp patient = new SignUp(connection,sc);
             Doctor doctor = new Doctor(connection);
-            System.out.println("WELCOME !! BOOK YOUR APPOINTMENT NOW");
-            System.out.println("Enter 1 to login if your account already exists");
-            System.out.println("Enter 2 to sign up");
+            System.out.println("*************** WELCOME !! BOOK YOUR APPOINTMENT NOW *****************");
+            System.out.println("------------- Enter 1 to login if your account already exists--------");
+            System.out.println("---------------------- Enter 2 to sign up----------------------------");
             int choice = sc.nextInt();
             switch (choice){
                 case 1:
@@ -49,17 +49,17 @@ public class HomePage {
     }
 
     static void listOfDepartments(Scanner sc, Connection connection,SignUp patient, Doctor doctor){
-        System.out.println("Book your appointment in any of the following departments");
-        System.out.println("Enter 1 for Cardiology");
-        System.out.println("Enter 2 for Neurology");
-        System.out.println("Enter 3 for Pediatrics");
-        System.out.println("Enter 4 for Radiology");
-        System.out.println("Enter 5 for Internal Medicine");
-        System.out.println("Enter 6 for Gastroenterology");
-        System.out.println("Enter 7 for Nephrology");
-        System.out.println("Enter 8 for Psychiatry");
-        System.out.println("Enter 9 for Urology");
-        System.out.println("Enter 10 for Dermatology");
+        System.out.println("Book your appointment in any of the following departments:");
+        System.out.println("-----------------Enter 1 for Cardiology-----------------");
+        System.out.println("-----------------Enter 2 for Neurology------------------");
+        System.out.println("-----------------Enter 3 for Pediatrics-----------------");
+        System.out.println("-----------------Enter 4 for Radiology-----------------");
+        System.out.println("-----------------Enter 5 for Internal Medicine-----------------");
+        System.out.println("-----------------Enter 6 for Gastroenterology-----------------");
+        System.out.println("-----------------Enter 7 for Nephrology-----------------");
+        System.out.println("-----------------Enter 8 for Psychiatry-----------------");
+        System.out.println("-----------------Enter 9 for Urology-----------------");
+        System.out.println("-----------------Enter 10 for Dermatology-----------------");
 
         int choice = sc.nextInt();
 
@@ -99,20 +99,25 @@ public class HomePage {
     }
 
     static void displayDoctors(String departmentName, Connection connection,Scanner sc,SignUp patient, Doctor doctor){
-        System.out.println("Doctors in " + departmentName + " department");
+        System.out.println("\nDoctors in " + departmentName + " department");
+        System.out.println("+-------------+--------------------------+");
+        System.out.println("| Doctor ID   | Name                     |");
+        System.out.println("+-------------+--------------------------+");
+
         String query = "select * from doctors where specialization=?";
         try{
             PreparedStatement preparedStatement = connection.prepareStatement(query);
             preparedStatement.setString(1, departmentName);
             ResultSet resultSet = preparedStatement.executeQuery();
 
-            while (resultSet.next()) {
-                String name = resultSet.getString("name");
+            while(resultSet.next()){
                 int id = resultSet.getInt("id");
-                System.out.println(id + " " + name);
+                String name = resultSet.getString("name");
+                System.out.printf("|%-13s|%-26s|\n",id, name);
+                System.out.println("+-------------+--------------------------+");
             }
 
-            System.out.println("Start Booking appointment");
+            System.out.println("\n\nStart Booking appointment:");
             bookAppointment(connection,sc,patient,doctor,departmentName);
 
         }
@@ -124,7 +129,7 @@ public class HomePage {
     }
 
     public static void login(Scanner sc, Connection connection){
-        System.out.println("Enter your patient id");
+        System.out.println("\nEnter your patient id");
         int pid = sc.nextInt();
         String query = "select * from logindetails where ID=?";
         try{
@@ -134,8 +139,8 @@ public class HomePage {
 
             if(resultSet.next()){
                 String name = resultSet.getString("Name");
-                System.out.println("Logged in successfully");
-                System.out.println("Welcome " + name.toUpperCase());
+                System.out.println("Logged in successfully\n");
+                System.out.println("-----------------------------Welcome " + name.toUpperCase()+"-----------------------------\n");
             }
         }
         catch(SQLException e){
@@ -144,11 +149,11 @@ public class HomePage {
     }
 
     public static void signup(Scanner sc, Connection connection){
-        System.out.println("Enter patient's name: ");
+        System.out.println("\nEnter patient's name: ");
         String name = sc.next();
-        System.out.println("Enter patient's age: ");
+        System.out.println("\nEnter patient's age: ");
         int age = sc.nextInt();
-        System.out.println("Enter patient's gender: ");
+        System.out.println("\nEnter patient's gender: ");
         String gender = sc.next();
 
         try{
@@ -161,10 +166,10 @@ public class HomePage {
             int affectedRows = preparedStatement.executeUpdate();   // returns number of rows affected
 
             if(affectedRows>0){
-                System.out.println("Signed Up Successfully!!");
+                System.out.println("Signed Up Successfully!!\n");
             }
             else{
-                System.out.println("Failed to sign up");
+                System.out.println("Failed to sign up\n");
             }
 
         }
@@ -174,22 +179,24 @@ public class HomePage {
     }
 
     public static void bookAppointment(Connection connection, Scanner sc, SignUp patient, Doctor doctor,String department){
-        System.out.println("Enter patient id");
+        System.out.println("\nEnter patient id");
         int patient_id = sc.nextInt();
 
-        System.out.println("Enter doctor name");
+        System.out.println("\nEnter doctor name");
         String doctor_name = sc.next();
 
-        System.out.println("Enter doctor id");
+        System.out.println("Entered name of doctor " + doctor_name);
+
+        System.out.println("\nEnter doctor id");
         int doctor_id = sc.nextInt();
 
-        System.out.println("Enter appointment date (YYYY-MM-DD):");
+        System.out.println("\nEnter appointment date (YYYY-MM-DD):");
         String appointment_date = sc.next();
 
         // check if patient and doctor exists
         if(patient.getPatientById(patient_id)){
             // check if doctor is available or not
-            if(doctor.getDoctorByName(doctor_name,department)) {
+            if(doctor.getDoctorByName(doctor_name,department,doctor_id)) {
                 if (checkDoctorAvailability(doctor_name, appointment_date, connection)) {
                     String appointment_query = "INSERT INTO appointments(patient_id,doctor_id,appointment_date, department,doctor_name) VALUES (?,?,?,?,?)";
                     try {
@@ -202,7 +209,7 @@ public class HomePage {
                         int rowsAffected = preparedStatement.executeUpdate();
 
                         if (rowsAffected > 0) {
-                            System.out.println("Appointment Booked");
+                            System.out.println("------------------------------Appointment Booked-----------------------------");
                         } else {
                             System.out.println("Failed to book appointment");
                         }
@@ -210,10 +217,10 @@ public class HomePage {
                         e.printStackTrace();
                     }
                 } else {
-                    System.out.println("Doctor is not available on this date");
+                    System.out.println("\nOops!! Doctor is not available on this date.");
                 }
             }else{
-                System.out.println("dpctor not");
+                System.out.println("doctor does not exist");
             }
         }
         else{
