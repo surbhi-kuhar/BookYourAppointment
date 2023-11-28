@@ -1,7 +1,7 @@
 import java.sql.*;
 import java.text.DateFormat;
 import java.time.LocalDate;
-import java.util.ArrayList;
+import java.time.format.DateTimeParseException;
 import java.util.Date;
 import java.util.Scanner;
 
@@ -25,18 +25,36 @@ public class HomePage {
             Connection connection = DriverManager.getConnection(url,username,password);
             SignUp patient = new SignUp(connection,sc);
             Doctor doctor = new Doctor(connection);
-            System.out.println("*************** WELCOME !! BOOK YOUR APPOINTMENT NOW *****************");
-            System.out.println("------------- Enter 1 to login if your account already exists--------");
-            System.out.println("---------------------- Enter 2 to sign up----------------------------");
+            System.out.println("**************************************** WELCOME !! BOOK YOUR APPOINTMENT NOW ************************************");
+            System.out.println("------------------------------------- Enter 1 to login if your account already exists------------------------------");
+            System.out.println("--------------------------------------------- Enter 2 to sign up---------------------------------------------------");
             int choice = sc.nextInt();
             switch (choice){
                 case 1:
                     int id = login(sc,connection);
-                    listOfDepartments(sc,connection,patient,doctor,id);
+                    System.out.println("Enter 1 for booking appointment");
+                    System.out.println("Enter 2 to view previous appointments");
+                    int input = sc.nextInt();
+                    if(input == 1){
+                        listOfDepartments(sc,connection,patient,doctor,id);
+                    }
+                    else{
+                        previousAppointments(id,connection,sc,patient,doctor);
+                    }
+
                     break;
                 case 2:
                     int pid = signup(sc,connection);
-                    listOfDepartments(sc,connection,patient,doctor,pid);
+                    System.out.println("Enter 1 for booking appointment");
+                    System.out.println("Enter 2 to view previous appointments");
+                    int choose = sc.nextInt();
+                    if(choose == 1){
+                        listOfDepartments(sc,connection,patient,doctor,pid);
+                    }
+                    else{
+                        previousAppointments(pid,connection,sc,patient,doctor);
+                    }
+
                     break;
                 default:
                     System.out.println("Invalid choice");
@@ -49,18 +67,18 @@ public class HomePage {
 
     }
 
-    static void listOfDepartments(Scanner sc, Connection connection,SignUp patient, Doctor doctor,int id){
+    private static void listOfDepartments(Scanner sc, Connection connection,SignUp patient, Doctor doctor,int id){
         System.out.println("Book your appointment in any of the following departments:");
         System.out.println("-----------------Enter 1 for Cardiology-----------------");
         System.out.println("-----------------Enter 2 for Neurology------------------");
         System.out.println("-----------------Enter 3 for Pediatrics-----------------");
-        System.out.println("-----------------Enter 4 for Radiology-----------------");
-        System.out.println("-----------------Enter 5 for Internal Medicine-----------------");
-        System.out.println("-----------------Enter 6 for Gastroenterology-----------------");
+        System.out.println("-----------------Enter 4 for Radiology------------------");
+        System.out.println("-----------------Enter 5 for Internal Medicine----------");
+        System.out.println("-----------------Enter 6 for Gastroenterology-----------");
         System.out.println("-----------------Enter 7 for Nephrology-----------------");
         System.out.println("-----------------Enter 8 for Psychiatry-----------------");
-        System.out.println("-----------------Enter 9 for Urology-----------------");
-        System.out.println("-----------------Enter 10 for Dermatology-----------------");
+        System.out.println("-----------------Enter 9 for Urology--------------------");
+        System.out.println("-----------------Enter 10 for Dermatology---------------");
 
         int choice = sc.nextInt();
 
@@ -99,13 +117,14 @@ public class HomePage {
 
     }
 
-    static void displayDoctors(String departmentName, Connection connection,Scanner sc,SignUp patient, Doctor doctor,int pid){
+    private static void displayDoctors(String departmentName, Connection connection,Scanner sc,SignUp patient, Doctor doctor,int pid){
         System.out.println("\nDoctors in " + departmentName + " department");
         System.out.println("+-------------+--------------------------+");
         System.out.println("| Doctor ID   | Name                     |");
         System.out.println("+-------------+--------------------------+");
 
         String query = "select * from doctors where specialization=?";
+
         try{
             PreparedStatement preparedStatement = connection.prepareStatement(query);
             preparedStatement.setString(1, departmentName);
@@ -130,7 +149,7 @@ public class HomePage {
 
     }
 
-    public static int login(Scanner sc, Connection connection){
+    private static int login(Scanner sc, Connection connection){
         System.out.println("\nEnter your patient id");
         int pid = sc.nextInt();
         String query = "select * from logindetails where ID=?";
@@ -141,7 +160,7 @@ public class HomePage {
 
             if(resultSet.next()){
                 String name = resultSet.getString("Name");
-                System.out.println("Logged in successfully\n");
+                System.out.println("Logged in successfully !!\n");
                 System.out.println("-----------------------------Welcome " + name.toUpperCase()+"-----------------------------\n");
             }
         }
@@ -151,7 +170,7 @@ public class HomePage {
         return pid;
     }
 
-    public static int signup(Scanner sc, Connection connection) {
+    private static int signup(Scanner sc, Connection connection) {
         System.out.println("\nEnter patient's name: ");
         String name = sc.next();
         System.out.println("\nEnter patient's age: ");
@@ -189,82 +208,116 @@ public class HomePage {
         return patientId;
     }
 
-    public static void bookAppointment(Connection connection, Scanner sc, SignUp patient, Doctor doctor,String department,int pid){
-        System.out.println("\nEnter patient id");
-        int patient_id = sc.nextInt();
+    private static synchronized void bookAppointment(Connection connection, Scanner sc, SignUp patient, Doctor doctor, String department, int pid) {
 
-        if(patient_id!=pid) {
-            System.out.println("Enter your own patient id");
-            return;
+        int patient_id = 0;
+        boolean validPatientId = false;
+
+        // Loop until a valid patient id is entered
+        while (!validPatientId) {
+            System.out.println("\nEnter patient id");
+            patient_id = sc.nextInt();
+
+            if (patient_id != pid) {
+                System.out.println("Enter your own patient id");
+            } else {
+                validPatientId = true;
+            }
         }
 
-        sc.nextLine();
+            sc.nextLine();
 
-        System.out.println("\nEnter doctor name");
-        String doctor_name = sc.nextLine();
+            System.out.println("\nEnter doctor name");
+            String doctor_name = sc.nextLine();
 
-        System.out.println("\nEnter doctor id");
-        int doctor_id = sc.nextInt();
+        int doctor_id=0;
+        boolean validDoctorId = false;
 
-        System.out.println("\nEnter appointment date (YYYY-MM-DD):");
-        String appointment_date_str = sc.next();
+        // Loop until a valid doctor id is entered
+        while (!validDoctorId) {
+            System.out.println("\nEnter doctor id");
+            doctor_id = sc.nextInt();
 
-        LocalDate appointment_date = LocalDate.parse(appointment_date_str);
-        LocalDate now = LocalDate.now();
-
-        if (appointment_date.isAfter(now)) {
-            // The appointment date is in the future
-            System.out.println("Appointment date is valid.");
-
-            // check if patient and doctor exists
-            if (patient.getPatientById(patient_id)) {
-                // check if doctor is available or not
-                if (doctor.getDoctorByName(doctor_name, department, doctor_id)) {
-                    if (checkDoctorAvailability(doctor_name, appointment_date_str, connection)) {
-                        String appointment_query = "INSERT INTO appointments(patient_id,doctor_id,appointment_date, department,doctor_name) VALUES (?,?,?,?,?)";
-                        try {
-                            PreparedStatement preparedStatement = connection.prepareStatement(appointment_query);
-                            preparedStatement.setInt(1, patient_id);
-                            preparedStatement.setInt(2, doctor_id);
-                            preparedStatement.setString(3, appointment_date_str);
-                            preparedStatement.setString(4, department);
-                            preparedStatement.setString(5, doctor_name);
-                            int rowsAffected = preparedStatement.executeUpdate();
-
-                            if (rowsAffected > 0) {
-                                System.out.println("------------------------------Appointment Booked-----------------------------");
-                                System.out.println("View previous appointments ? (YES/NO)");
-                                String input = sc.next();
-                                if(input.equals("Yes") ||input.equals("yes") ||input.equals("YES")){
-                                    previousAppointments(patient_id,connection,sc);
-                                }
-
-                            } else {
-                                System.out.println("Failed to book appointment");
-                            }
-                        } catch (SQLException e) {
-                            e.printStackTrace();
-                        }
-                    } else {
-                        System.out.println("\nOops!! Doctor is not available on this date.");
-                    }
-                } else {
-                    System.out.println("doctor does not exist");
-                }
+            if (!doctor.getDoctorByName(doctor_name, department, doctor_id)) {
+                System.out.println("You entered wrong doctor id.");
             } else {
-                System.out.println("patient does not exist");
+                validDoctorId = true;
+            }
+        }
+
+            if(!doctor.getDoctorByName(doctor_name,department,doctor_id)){
+                System.out.println("You entered wrong doctor id.");
+
             }
 
+        LocalDate appointment_date = null;
+        boolean validAppointmentDate = false;
+        String appointment_date_str = null;
+
+        // Loop for a valid appointment date
+        while (!validAppointmentDate) {
+            System.out.println("\nEnter appointment date (YYYY-MM-DD):");
+            appointment_date_str = sc.next();
+
+            try {
+                appointment_date = LocalDate.parse(appointment_date_str);
+                LocalDate now = LocalDate.now();
+
+                if (appointment_date.isAfter(now)) {
+                    validAppointmentDate = true;
+                } else {
+                    System.out.println("Enter a date that is after today's date.");
+                }
+            } catch (DateTimeParseException e) {
+                System.out.println("Invalid date format. Please enter the date in the format (YYYY-MM-DD).");
+            }
         }
-        else {
-            // The appointment date is not in the future
-            System.out.println("Enter a date that is after today's date.");
-        }
 
 
-    }
+                // check if patient and doctor exist
+                if (patient.getPatientById(patient_id)) {
+                    // check if doctor is available or not
+                    if (doctor.getDoctorByName(doctor_name, department, doctor_id)) {
+                        if (checkDoctorAvailability(doctor_name, appointment_date_str, connection)) {
+                            String appointment_query = "INSERT INTO appointments(patient_id,doctor_id,appointment_date, department,doctor_name) VALUES (?,?,?,?,?)";
+                            try {
+                                PreparedStatement preparedStatement = connection.prepareStatement(appointment_query);
+                                preparedStatement.setInt(1, patient_id);
+                                preparedStatement.setInt(2, doctor_id);
+                                preparedStatement.setString(3, appointment_date_str);
+                                preparedStatement.setString(4, department);
+                                preparedStatement.setString(5, doctor_name);
+                                int rowsAffected = preparedStatement.executeUpdate();
 
-    public static boolean checkDoctorAvailability(String doctor_name, String appointment_date,Connection connection){
+                                if (rowsAffected > 0) {
+                                    System.out.println("\n\n------------------------------Appointment Booked-----------------------------");
+                                    System.out.println("View previous appointments? (Yes/No)");
+
+                                    String input = sc.next();
+                                    if (input.equalsIgnoreCase("Yes")) {
+                                        previousAppointments(patient_id, connection, sc,patient,doctor);
+                                    }
+
+                                } else {
+                                    System.out.println("Failed to book appointment");
+                                }
+                            } catch (SQLException e) {
+                                e.printStackTrace();
+                            }
+                        } else {
+                            System.out.println("\nOops!! Doctor is not available on this date. Try on some other date.");
+                        }
+                    } else {
+                        System.out.println("Doctor does not exist");
+                    }
+                } else {
+                    System.out.println("Patient does not exist");
+                }
+            }
+
+
+
+    private static boolean checkDoctorAvailability(String doctor_name, String appointment_date,Connection connection){
         String query = "select COUNT(*) from appointments where doctor_name=? AND appointment_date=?";
         try{
             PreparedStatement preparedStatement = connection.prepareStatement(query);
@@ -288,12 +341,12 @@ public class HomePage {
 
     }
 
-    public static void previousAppointments(int pid, Connection connection, Scanner sc) {
+    private static void previousAppointments(int pid, Connection connection, Scanner sc,SignUp patient, Doctor doctor) {
 
-        System.out.println("Your previous appointments");
+        System.out.println("-----------------------------YOUR PREVIOUS APPOINTMENTS---------------------------------------------");
 
         System.out.println("+-------------+-------------+----------------+---------------------------+-------------------------+");
-        System.out.println("| Patient ID   | Doctor ID   | Doctor Name   | Department                | Appointment Date        |");
+        System.out.println("| Patient ID  | Doctor ID   | Doctor Name    | Department                | Appointment Date        |");
         System.out.println("+-------------+-------------+----------------+---------------------------+-------------------------+");
 
         String query = "select * from appointments where patient_id=?";
@@ -309,9 +362,16 @@ public class HomePage {
                 String department = resultSet.getString("department");
                 Date app_date = resultSet.getDate("appointment_date");
 
-                System.out.printf("|%-13s|%-13s|%-20s|%-35s|%-40s|\n", pat_id, doc_id, doctorName, department, app_date);
+                System.out.printf("|%-13s|%-13s|%-16s|%-27s|%-25s|\n", pat_id, doc_id, doctorName, department, app_date);
                 System.out.println("+-------------+-------------+----------------+---------------------------+-------------------------+");
             }
+
+            System.out.println("Want to book appointment ? (Yes/No)");
+            String input = sc.next();
+            if (input.equalsIgnoreCase("Yes")) {
+                listOfDepartments(sc, connection, patient, doctor, pid);
+            }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
